@@ -1,0 +1,196 @@
+{% extends 'canteen/base.html' %}
+
+{% block title %}My Dashboard - Campus Canteen{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-tachometer-alt me-2"></i>My Dashboard</h1>
+            <a href="{% url 'canteen:menu' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>New Pre-order
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Order Status Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <i class="fas fa-clock fa-2x mb-2"></i>
+                <h4>{{ pending_orders.count }}</h4>
+                <p class="mb-0">Pending Orders</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <h4>{{ confirmed_orders.count }}</h4>
+                <p class="mb-0">Confirmed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <i class="fas fa-shopping-bag fa-2x mb-2"></i>
+                <h4>{{ ready_orders.count }}</h4>
+                <p class="mb-0">Ready for Pickup</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-secondary text-white">
+            <div class="card-body">
+                <i class="fas fa-check-double fa-2x mb-2"></i>
+                <h4>{{ picked_orders.count }}</h4>
+                <p class="mb-0">Completed</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Options -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label for="status" class="form-label">Filter by Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">All Orders</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                            <option value="ready" {% if status_filter == 'ready' %}selected{% endif %}>Ready for Pickup</option>
+                            <option value="picked" {% if status_filter == 'picked' %}selected{% endif %}>Picked Up</option>
+                            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-1"></i>Apply Filter
+                        </button>
+                        <a href="{% url 'canteen:dashboard' %}" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-times me-1"></i>Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Orders List -->
+<div class="row">
+    <div class="col-12">
+        {% if preorders %}
+            {% for order in preorders %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                {% if order.dish.image %}
+                                    <img src="{{ order.dish.image.url }}" alt="{{ order.dish.name }}" 
+                                         class="img-fluid rounded" style="max-height: 80px; object-fit: cover;">
+                                {% else %}
+                                    <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                         style="height: 80px; width: 80px;">
+                                        <i class="fas fa-utensils text-muted"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <h6 class="mb-1">{{ order.dish.name }}</h6>
+                                <small class="text-muted">Order #{{ order.order_number }}</small>
+                                <br>
+                                <small class="text-muted">Quantity: {{ order.quantity }}</small>
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <small class="text-muted">Pickup Date</small>
+                                <div class="fw-bold">{{ order.date|date:"M d, Y" }}</div>
+                                <small class="text-muted">{{ order.pickup_slot }}</small>
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <small class="text-muted">Total Amount</small>
+                                <div class="h5 text-primary mb-0">₹{{ order.total_amount }}</div>
+                            </div>
+                            
+                            <div class="col-md-2">
+                                {% if order.status == 'pending' %}
+                                    <span class="badge bg-warning">Pending</span>
+                                {% elif order.status == 'confirmed' %}
+                                    <span class="badge bg-info">Confirmed</span>
+                                {% elif order.status == 'ready' %}
+                                    <span class="badge bg-success">Ready</span>
+                                {% elif order.status == 'picked' %}
+                                    <span class="badge bg-secondary">Picked Up</span>
+                                {% elif order.status == 'cancelled' %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-1">
+                                {% if order.status in 'pending,confirmed' %}
+                                    <form method="post" action="{% url 'canteen:cancel_preorder' order.id %}" 
+                                          onsubmit="return confirm('Are you sure you want to cancel this order?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if order.special_instructions %}
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <small class="text-muted">
+                                        <i class="fas fa-comment me-1"></i>
+                                        <strong>Special Instructions:</strong> {{ order.special_instructions }}
+                                    </small>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Ordered on {{ order.created_at|date:"M d, Y H:i" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                    <h4>No orders found</h4>
+                    <p class="text-muted mb-4">
+                        {% if status_filter %}
+                            No orders with "{{ status_filter }}" status found.
+                        {% else %}
+                            You haven't placed any pre-orders yet.
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'canteen:menu' %}" class="btn btn-primary">
+                        <i class="fas fa-utensils me-2"></i>Browse Menu & Order
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

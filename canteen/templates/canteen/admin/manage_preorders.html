@@ -1,0 +1,251 @@
+{% extends 'canteen/base.html' %}
+
+{% block title %}Manage Pre-orders - Campus Canteen{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-shopping-cart me-2"></i>Manage Pre-orders</h1>
+            <span class="badge bg-primary fs-6">{{ preorders.count }} orders</span>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Options -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="date" class="form-label">Filter by Date</label>
+                        <input type="date" class="form-control" id="date" name="date" value="{{ date_filter }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="status" class="form-label">Filter by Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">All Statuses</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                            <option value="ready" {% if status_filter == 'ready' %}selected{% endif %}>Ready</option>
+                            <option value="picked" {% if status_filter == 'picked' %}selected{% endif %}>Picked Up</option>
+                            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-1"></i>Apply Filter
+                        </button>
+                        <a href="{% url 'canteen:manage_preorders' %}" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-times me-1"></i>Clear
+                        </a>
+                        <button type="submit" name="date" value="{{ today }}" class="btn btn-outline-info ms-2">
+                            <i class="fas fa-calendar-day me-1"></i>Today
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats for Selected Date -->
+{% if date_filter or not date_filter %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <i class="fas fa-clock fa-2x mb-2"></i>
+                <h4>{{ preorders|length }}</h4>
+                <p class="mb-0">Total Orders</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <h4>0</h4>
+                <p class="mb-0">Confirmed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <i class="fas fa-shopping-bag fa-2x mb-2"></i>
+                <h4>0</h4>
+                <p class="mb-0">Ready</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-secondary text-white">
+            <div class="card-body">
+                <i class="fas fa-check-double fa-2x mb-2"></i>
+                <h4>0</h4>
+                <p class="mb-0">Completed</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Pre-orders Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list me-2"></i>Pre-orders 
+                    {% if date_filter %}for {{ date_filter|date:"M d, Y" }}{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th>Dish</th>
+                                <th>Quantity</th>
+                                <th>Pickup Slot</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in preorders %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ order.order_number }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ order.created_at|date:"M d, H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ order.user.first_name }} {{ order.user.last_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ order.user.username }}</small>
+                                        {% if order.user.userprofile.student_id %}
+                                            <br><small class="text-muted">ID: {{ order.user.userprofile.student_id }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if order.dish.image %}
+                                                <img src="{{ order.dish.image.url }}" alt="{{ order.dish.name }}" 
+                                                     class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                            {% endif %}
+                                            <div>
+                                                <strong>{{ order.dish.name }}</strong>
+                                                <br>
+                                                <small class="text-muted">₹{{ order.dish.price }} each</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary">{{ order.quantity }}</span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ order.pickup_slot }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ order.date|date:"M d" }}</small>
+                                    </td>
+                                    <td class="text-primary fw-bold">₹{{ order.total_amount }}</td>
+                                    <td>
+                                        {% if order.status == 'pending' %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% elif order.status == 'confirmed' %}
+                                            <span class="badge bg-info">Confirmed</span>
+                                        {% elif order.status == 'ready' %}
+                                            <span class="badge bg-success">Ready</span>
+                                        {% elif order.status == 'picked' %}
+                                            <span class="badge bg-secondary">Picked Up</span>
+                                        {% elif order.status == 'cancelled' %}
+                                            <span class="badge bg-danger">Cancelled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if order.status != 'picked' and order.status != 'cancelled' %}
+                                            <div class="btn-group" role="group">
+                                                {% if order.status == 'pending' %}
+                                                    <form method="post" style="display: inline;">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="order_id" value="{{ order.id }}">
+                                                        <input type="hidden" name="status" value="confirmed">
+                                                        <button type="submit" class="btn btn-outline-success btn-sm" title="Confirm Order">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                    </form>
+                                                {% elif order.status == 'confirmed' %}
+                                                    <form method="post" style="display: inline;">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="order_id" value="{{ order.id }}">
+                                                        <input type="hidden" name="status" value="ready">
+                                                        <button type="submit" class="btn btn-outline-primary btn-sm" title="Mark Ready">
+                                                            <i class="fas fa-bell"></i>
+                                                        </button>
+                                                    </form>
+                                                {% elif order.status == 'ready' %}
+                                                    <form method="post" style="display: inline;">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="order_id" value="{{ order.id }}">
+                                                        <input type="hidden" name="status" value="picked">
+                                                        <button type="submit" class="btn btn-outline-secondary btn-sm" title="Mark as Picked Up">
+                                                            <i class="fas fa-check-double"></i>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                                
+                                                {% if order.status in 'pending,confirmed' %}
+                                                    <form method="post" style="display: inline;">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="order_id" value="{{ order.id }}">
+                                                        <input type="hidden" name="status" value="cancelled">
+                                                        <button type="submit" class="btn btn-outline-danger btn-sm ms-1" 
+                                                                title="Cancel Order"
+                                                                onclick="return confirm('Are you sure you want to cancel this order?')">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% if order.special_instructions %}
+                                    <tr class="table-light">
+                                        <td colspan="8">
+                                            <small>
+                                                <i class="fas fa-comment text-muted me-1"></i>
+                                                <strong>Special Instructions:</strong> {{ order.special_instructions }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                                        <h5>No pre-orders found</h5>
+                                        <p class="text-muted">
+                                            {% if date_filter or status_filter %}
+                                                No orders match the selected filters.
+                                            {% else %}
+                                                No pre-orders have been placed yet.
+                                            {% endif %}
+                                        </p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

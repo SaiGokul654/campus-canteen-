@@ -1,0 +1,150 @@
+{% extends 'canteen/base.html' %}
+
+{% block title %}Pre-book {{ dish.name }} - Campus Canteen{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-clock me-2"></i>Pre-book Order</h4>
+            </div>
+            <div class="card-body">
+                <!-- Dish Info -->
+                <div class="d-flex align-items-center mb-4 p-3 bg-light rounded">
+                    {% if dish.image %}
+                        <img src="{{ dish.image.url }}" alt="{{ dish.name }}" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover;">
+                    {% endif %}
+                    <div>
+                        <h5 class="mb-1">{{ dish.name }}</h5>
+                        <p class="text-muted mb-1">{{ dish.description|truncatewords:15 }}</p>
+                        <strong class="text-primary">₹{{ dish.price }} per serving</strong>
+                    </div>
+                </div>
+
+                <!-- Pre-order Form -->
+                <form method="post" id="preOrderForm">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.quantity.id_for_label }}" class="form-label">Quantity</label>
+                        {{ form.quantity }}
+                        <div class="form-text">Maximum 10 items per order</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.date.id_for_label }}" class="form-label">Pickup Date</label>
+                        {{ form.date }}
+                        <div class="form-text">Orders must be placed at least 1 day in advance</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.pickup_slot.id_for_label }}" class="form-label">Pickup Time Slot</label>
+                        {{ form.pickup_slot }}
+                        <div class="form-text">Choose your preferred pickup time</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.special_instructions.id_for_label }}" class="form-label">Special Instructions (Optional)</label>
+                        {{ form.special_instructions }}
+                    </div>
+                    
+                    <!-- Order Summary -->
+                    <div class="border rounded p-3 mb-4 bg-light">
+                        <h6>Order Summary</h6>
+                        <div class="d-flex justify-content-between">
+                            <span>Price per item:</span>
+                            <span>₹{{ dish.price }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Quantity:</span>
+                            <span id="summaryQuantity">1</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between fw-bold">
+                            <span>Total Amount:</span>
+                            <span id="totalAmount">₹{{ dish.price }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-check me-2"></i>Confirm Pre-order
+                        </button>
+                        <a href="{% url 'canteen:dish_detail' dish.pk %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dish
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle me-2"></i>Pre-booking Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6><i class="fas fa-clock me-2 text-primary"></i>How Pre-booking Works</h6>
+                    <ul class="list-unstyled ps-3">
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Place your order at least 1 day in advance</li>
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Choose your preferred pickup time slot</li>
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Pay when you collect your order</li>
+                        <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Skip the queue with pre-orders!</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-4">
+                    <h6><i class="fas fa-calendar-alt me-2 text-primary"></i>Available Pickup Slots</h6>
+                    <div class="row g-2">
+                        {% for slot in pickup_slots %}
+                            <div class="col-6">
+                                <div class="border rounded p-2 text-center">
+                                    <small class="fw-bold">{{ slot.start_time|time:"H:i" }} - {{ slot.end_time|time:"H:i" }}</small>
+                                    <br>
+                                    <small class="text-muted">Max {{ slot.max_orders }} orders</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Important:</strong> Please arrive within your selected time slot. Orders not collected within 30 minutes may be cancelled.
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-credit-card me-2"></i>
+                    <strong>Payment:</strong> Cash payment required at pickup. Online payment coming soon!
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const quantityInput = document.getElementById('id_quantity');
+    const summaryQuantity = document.getElementById('summaryQuantity');
+    const totalAmount = document.getElementById('totalAmount');
+    const pricePerItem = {{ dish.price }};
+    
+    function updateSummary() {
+        const quantity = parseInt(quantityInput.value) || 1;
+        const total = quantity * pricePerItem;
+        
+        summaryQuantity.textContent = quantity;
+        totalAmount.textContent = '₹' + total.toFixed(2);
+    }
+    
+    quantityInput.addEventListener('input', updateSummary);
+    quantityInput.addEventListener('change', updateSummary);
+});
+</script>
+{% endblock %}

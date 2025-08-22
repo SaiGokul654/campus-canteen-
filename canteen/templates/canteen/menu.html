@@ -1,0 +1,177 @@
+{% extends 'canteen/base.html' %}
+
+{% block title %}Daily Menu - Campus Canteen{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-calendar-day me-2"></i>Today's Menu</h1>
+            <span class="badge bg-primary fs-6">{{ page_obj.paginator.count }} dishes available</span>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="search" class="form-label">Search Dishes</label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               value="{{ search_query }}" placeholder="Search by name, description...">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="dish_type" class="form-label">Type</label>
+                        <select class="form-select" id="dish_type" name="dish_type">
+                            <option value="">All Types</option>
+                            <option value="veg" {% if dish_type_filter == 'veg' %}selected{% endif %}>Vegetarian</option>
+                            <option value="non_veg" {% if dish_type_filter == 'non_veg' %}selected{% endif %}>Non-Vegetarian</option>
+                            <option value="beverage" {% if dish_type_filter == 'beverage' %}selected{% endif %}>Beverages</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="sort" class="form-label">Sort By</label>
+                        <select class="form-select" id="sort" name="sort">
+                            <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+                            <option value="price" {% if sort_by == 'price' %}selected{% endif %}>Price</option>
+                            <option value="rating" {% if sort_by == 'rating' %}selected{% endif %}>Rating</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>Filter
+                        </button>
+                        <a href="{% url 'canteen:menu' %}" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-times me-1"></i>Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Menu Items -->
+<div class="row">
+    {% for dish in page_obj %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card dish-card h-100">
+                <div class="position-relative">
+                    {% if dish.image %}
+                        <img src="{{ dish.image.url }}" class="card-img-top" alt="{{ dish.name }}">
+                    {% else %}
+                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                            <i class="fas fa-utensils fa-3x text-muted"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="veg-indicator {{ dish.dish_type }}"></div>
+                    
+                    {% if dish.is_featured %}
+                        <span class="badge bg-warning position-absolute top-0 start-0 m-2">Featured</span>
+                    {% endif %}
+                </div>
+                
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ dish.name }}</h5>
+                    <p class="card-text text-muted small flex-grow-1">{{ dish.description|truncatewords:20 }}</p>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="h5 text-primary mb-0">₹{{ dish.price }}</span>
+                        <div class="rating-stars">
+                            {% for i in "12345" %}
+                                {% if i|add:0 <= dish.average_rating %}
+                                    <i class="fas fa-star"></i>
+                                {% else %}
+                                    <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                            <small class="text-muted ms-1">({{ dish.total_reviews }})</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-auto">
+                        {% if dish.is_available %}
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'canteen:dish_detail' dish.pk %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye me-1"></i>View Details
+                                </a>
+                                {% if user.is_authenticated %}
+                                    <a href="{% url 'canteen:prebook_dish' dish.id %}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-clock me-1"></i>Pre-book
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="d-grid">
+                                <button class="btn btn-danger btn-sm" disabled>
+                                    <i class="fas fa-times me-1"></i>Sold Out
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12 text-center">
+            <div class="py-5">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h3>No dishes found</h3>
+                <p class="text-muted">Try adjusting your search criteria</p>
+                <a href="{% url 'canteen:menu' %}" class="btn btn-primary">View All Dishes</a>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if dish_type_filter %}&dish_type={{ dish_type_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">Previous</a>
+                </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if dish_type_filter %}&dish_type={{ dish_type_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if dish_type_filter %}&dish_type={{ dish_type_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">Next</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+
+{% endblock %}

@@ -5,10 +5,13 @@ from django.db.models import Q, Avg
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
+from django.contrib.auth import logout
+
 from .models import Dish, Category, Review, PreOrder, PickupSlot
 from .forms import ReviewForm, PreOrderForm
 from accounts.models import UserProfile
+
 
 def menu(request):
     """Display the daily menu with search and filter options"""
@@ -58,6 +61,7 @@ def menu(request):
     }
     return render(request, 'canteen/menu.html', context)
 
+
 def dish_detail(request, pk):
     """Display dish details with reviews and pre-order option"""
     dish = get_object_or_404(Dish, pk=pk)
@@ -103,6 +107,7 @@ def dish_detail(request, pk):
     }
     return render(request, 'canteen/dish_detail.html', context)
 
+
 @login_required
 def prebook_dish(request, dish_id):
     """Pre-book a dish for pickup"""
@@ -121,7 +126,6 @@ def prebook_dish(request, dish_id):
             return redirect('canteen:dashboard')
     else:
         form = PreOrderForm()
-        # Set default date to tomorrow
         form.fields['date'].initial = date.today() + timedelta(days=1)
     
     context = {
@@ -131,31 +135,26 @@ def prebook_dish(request, dish_id):
     }
     return render(request, 'canteen/prebook.html', context)
 
+
 @login_required
 def dashboard(request):
     """Student dashboard showing their preorders"""
     preorders = PreOrder.objects.filter(user=request.user).select_related('dish', 'pickup_slot')
     
-    # Filter by status
     status_filter = request.GET.get('status', '')
     if status_filter:
         preorders = preorders.filter(status=status_filter)
     
-    # Separate into categories
-    pending_orders = preorders.filter(status='pending')
-    confirmed_orders = preorders.filter(status='confirmed')
-    ready_orders = preorders.filter(status='ready')
-    picked_orders = preorders.filter(status='picked')
-    
     context = {
         'preorders': preorders,
-        'pending_orders': pending_orders,
-        'confirmed_orders': confirmed_orders,
-        'ready_orders': ready_orders,
-        'picked_orders': picked_orders,
+        'pending_orders': preorders.filter(status='pending'),
+        'confirmed_orders': preorders.filter(status='confirmed'),
+        'ready_orders': preorders.filter(status='ready'),
+        'picked_orders': preorders.filter(status='picked'),
         'status_filter': status_filter,
     }
     return render(request, 'canteen/dashboard.html', context)
+
 
 @login_required
 @require_POST
@@ -172,11 +171,10 @@ def cancel_preorder(request, order_id):
     
     return redirect('canteen:dashboard')
 
-# Staff/Admin Views
+
 @login_required
 def manage_dishes(request):
     """Staff view to manage dishes and availability"""
-    # Check if user is staff
     try:
         profile = UserProfile.objects.get(user=request.user)
         if not profile.is_staff_member:
@@ -188,7 +186,6 @@ def manage_dishes(request):
     
     dishes = Dish.objects.all().select_related('category')
     
-    # Handle availability toggle
     if request.method == 'POST':
         dish_id = request.POST.get('dish_id')
         action = request.POST.get('action')
@@ -201,15 +198,12 @@ def manage_dishes(request):
                 status = "available" if dish.is_available else "sold out"
                 messages.success(request, f'{dish.name} marked as {status}')
     
-    context = {
-        'dishes': dishes,
-    }
-    return render(request, 'canteen/admin/manage_dishes.html', context)
+    return render(request, 'canteen/admin/manage_dishes.html', {'dishes': dishes})
+
 
 @login_required
 def manage_preorders(request):
     """Staff view to manage preorders"""
-    # Check if user is staff
     try:
         profile = UserProfile.objects.get(user=request.user)
         if not profile.is_staff_member:
@@ -221,20 +215,16 @@ def manage_preorders(request):
     
     preorders = PreOrder.objects.all().select_related('user', 'dish', 'pickup_slot')
     
-    # Filter by date
     date_filter = request.GET.get('date', '')
     if date_filter:
         preorders = preorders.filter(date=date_filter)
     else:
-        # Default to today's orders
         preorders = preorders.filter(date=date.today())
     
-    # Filter by status
     status_filter = request.GET.get('status', '')
     if status_filter:
         preorders = preorders.filter(status=status_filter)
     
-    # Handle status updates
     if request.method == 'POST':
         order_id = request.POST.get('order_id')
         new_status = request.POST.get('status')
@@ -252,3 +242,11 @@ def manage_preorders(request):
         'today': date.today(),
     }
     return render(request, 'canteen/admin/manage_preorders.html', context)
+
+
+# ---------------- Logout View ---------------- #
+@login_required
+def logout_view(request):
+    """Log the user out and show logout confirmation page"""
+    logout(request)
+    return render(request, 'canteen/logout.html')
